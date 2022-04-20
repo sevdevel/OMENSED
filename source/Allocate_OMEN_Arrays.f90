@@ -38,12 +38,16 @@ ALLOCATE(OS_boundaryconds(1,MaxOMENbcArids))
 OS_boundaryconds = 0.0D0
 ALLOCATE(OS_RCM_array(2,OS_RCM_fracs))
 OS_RCM_array = 0.D0
+ALLOCATE(OS_bsi_array(2,OS_bsi_fracs))
+OS_bsi_array = 0.D0
 !
 !2. arrays for zTOC calculation
 !------------------
 !
 ALLOCATE(OS_POC_conc_swi(OS_RCM_fracs))
 OS_POC_conc_swi = 0.D0
+ALLOCATE(OS_bsi_conc_swi(OS_bsi_fracs))
+OS_bsi_conc_swi = 0.D0
 ALLOCATE(aa1(OS_RCM_fracs))
 aa1 = 0.D0
 ALLOCATE(bb1(OS_RCM_fracs))
@@ -101,7 +105,7 @@ DEALLOCATE(OS_SWI_fluxes) ! + M, + POC_tot, + POC_1, + POC_2
 DEALLOCATE(OS_BW_conds)
 !DEALLOCATE(OS_part_fluxes)
 DEALLOCATE(OS_boundaryconds)
-DEALLOCATE(OS_RCM_array)
+DEALLOCATE(OS_RCM_array,OS_bsi_array)
 
 !
 !2. arrays for zTOC calculation

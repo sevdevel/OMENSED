@@ -69,6 +69,8 @@ IF (nt.LE.1) THEN
    OS_BW_conds(1,iarr_OS_DIC) = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_AT)  = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_POC) = 10.D0*1.D-3*1.D-4*365.25D0
+   
+   OS_BW_conds(1,iarr_OS_bsi) = 10.D0*1.D-3*1.D-4*365.25D0
 
 ELSEIF (nt.LE.2) THEN
    
@@ -83,6 +85,7 @@ ELSEIF (nt.LE.2) THEN
    OS_BW_conds(1,iarr_OS_DIC) = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_AT)  = 2480.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_POC) = 10.D0*1.D-3*1.D-4*365.25D0
+   OS_BW_conds(1,iarr_OS_bsi) = 10.D0*1.D-3*1.D-4*365.25D0
 
 ELSEIF (nt.LE.3) THEN
 
@@ -97,6 +100,7 @@ ELSEIF (nt.LE.3) THEN
    OS_BW_conds(1,iarr_OS_DIC) = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_AT)  = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_POC) = 10.D0*1.D-3*1.D-4*365.25D0
+   OS_BW_conds(1,iarr_OS_bsi) = 10.D0*1.D-3*1.D-4*365.25D0
 
 ELSEIF (nt.LE.4) THEN
 
@@ -111,6 +115,7 @@ ELSEIF (nt.LE.4) THEN
    OS_BW_conds(1,iarr_OS_DIC) = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_AT)  = 2400.D-9         ! mol cm-3
    OS_BW_conds(1,iarr_OS_POC) = 10.D0*1.D-3*1.D-4*365.25D0
+   OS_BW_conds(1,iarr_OS_bsi) = 10.D0*1.D-3*1.D-4*365.25D0
    
 END IF
 !Call OMENSED
@@ -118,7 +123,8 @@ END IF
 CALL OMENSED(SedVel=sedvel, dum_sfcsumocn=OS_BW_conds(1,:), &
            & dum_new_swifluxes=OS_SWI_fluxes(1,:), dum_OMENSED_BC=OS_boundaryconds(1,:), &
            & dum_diag_profile=OS_diag_profile, dum_z_vector=OS_z_vector, &
-           & dum_RCM_approx=OS_RCM_array, dum_POC_conc_swi=OS_POC_conc_swi) 
+           & dum_RCM_approx=OS_RCM_array, dum_bsi_approx=OS_bsi_array, &
+           & dum_POC_conc_swi=OS_POC_conc_swi, dum_bsi_conc_swi=OS_bsi_conc_swi) 
 
   
 CALL write_OMENSED_output(filename="output.dat",iounit=2000,fluxarray=OS_SWI_fluxes, &

@@ -28,7 +28,8 @@ CONTAINS
 
 SUBROUTINE OMENSED(SedVel, dum_sfcsumocn, &
                  & dum_new_swifluxes, dum_OMENSED_BC, dum_diag_profile, &
-                 & dum_z_vector, dum_RCM_approx, dum_POC_conc_swi)
+                 & dum_z_vector, dum_RCM_approx, dum_bsi_approx, dum_POC_conc_swi, &
+                 & dum_bsi_conc_swi)
 
 !************************************************************************
 !
@@ -65,13 +66,17 @@ REAL(8),DIMENSION(MaxOMENbcArids), INTENT(INOUT) :: dum_OMENSED_BC
 REAL(8),DIMENSION(OS_vertical_grid,MaxOMENSWIArids), INTENT(INOUT) :: dum_diag_profile 
 REAL(8), DIMENSION(OS_vertical_grid), INTENT(IN) :: dum_z_vector 
 REAl(8), DIMENSION(2,OS_RCM_fracs), INTENT(INOUT) :: dum_RCM_approx
+REAl(8), DIMENSION(2,OS_bsi_fracs), INTENT(INOUT) :: dum_bsi_approx
 REAL(8), DIMENSION(OS_RCM_fracs), INTENT(INOUT) :: dum_POC_conc_swi
+REAL(8), DIMENSION(OS_bsi_fracs), INTENT(INOUT) :: dum_bsi_conc_swi
+
 
 !
 !*Local variables
 !
 INTEGER :: i
 REAL(8) :: loc_POC_flux_swi = 0.0D0    ! POC flux at SWI [mol/(cm^2 yr)]
+REAL(8) :: loc_bsi_flux_swi = 0.0D0    ! bSi flux at SWI [mol/(cm^2 yr)]
 REAL(8) :: loc_O2_swiflux    = 0.0D0    ! SWI return fluxes of O2 [mol/(cm^2 yr)]
 REAL(8) :: loc_SO4_swiflux   = 0.0D0    ! SWI return fluxes of SO4 [mol/(cm^2 yr)]
 REAL(8) :: loc_NO3_swiflux   = 0.0D0    ! SWI return fluxes of NO3 [mol/(cm^2 yr)]
@@ -82,16 +87,21 @@ REAL(8) :: loc_M_swiflux     = 0.0D0    ! SWI return fluxes of M - DOES NOT EXIS
 REAL(8) :: loc_DIC_swiflux   = 0.0D0    ! SWI return fluxes of DIC [mol/(cm^2 yr)]
 !REAL(8) :: loc_DIC_13C_swiflux = 0.0D0 ! SWI return fluxes of DIC [mol/(cm^2 yr)]
 REAL(8) :: loc_ALK_swiflux   = 0.0D0    ! SWI return fluxes of ALK [mol/(cm^2 yr)]
+REAL(8) :: loc_dsi_swiflux   = 0.0D0    ! SWI return fluxes of dsi [mol/(cm^2 yr)]
 REAL(8) :: loc_mixed_layer   = 5.0D0    ! mixed layer depth, to compare wt% with observations
 
+REAL(8) :: dum_sed_mean_bsi             ! mean bSi wt% in upper mixed layer
 REAL(8) :: dum_sed_mean_OM              ! mean OM wt% in upper mixed layer
+REAL(8) :: dum_sed_bsi_wtpc_bot         ! bSi wt% at bottom of sediment column (geologic preservation)
 REAL(8) :: dum_sed_OM_wtpc_bot          ! POC wt% at bottom of sediment column (geologic preservation)
+REAL(8) :: dum_sed_pres_fracSi          ! fraction bSi-preserved/bSi-deposited [-]
 REAL(8) :: dum_sed_pres_fracC           ! fraction POC-preserved/POC-deposited [-]
 REAL(8) :: dum_sed_pres_fracP           ! fraction POP-preserved/POP-deposited [-]
 
 ! parameters for temperature dependent rate constants (as in John et al. 2014)
 REAL(8) :: loc_T                        ! local temperature
 REAL(8) :: loc_PO4_return_max
+REAL(8) :: loc_fbsi                     ! bSi flux to the sediment [cm3 cm-2]
 REAL(8) :: loc_fPOC                     ! Corg flux to the sediment [cm3 cm-2]
 REAL(8) :: loc_fPOC_13C                 ! 13C of POC flux to the sediment [cm3 cm-2]
 
@@ -106,6 +116,7 @@ dum_sed_mean_OM  = dum_OMENSED_BC(iarr_OS_POC_swi)
 dum_sed_pres_fracC = dum_OMENSED_BC(iarr_OS_POC_pres_frac)
 dum_sed_pres_fracP = dum_OMENSED_BC(iarr_OS_POP_pres_frac)
 
+
 dum_swiconc_O2  = dum_sfcsumocn(iarr_OS_O2)
 dum_swiconc_NO3 = dum_sfcsumocn(iarr_OS_NO3)
 dum_swiconc_NH4 = dum_sfcsumocn(iarr_OS_NH4)
@@ -116,7 +127,15 @@ dum_swiconc_DIC = dum_sfcsumocn(iarr_OS_DIC)
 dum_swiconc_ALK = dum_sfcsumocn(iarr_OS_AT)
 
 loc_fPOC = dum_sfcsumocn(iarr_OS_POC)
-loc_POC_flux_swi = conv_POC_cm3_mol*loc_fPOC
+loc_POC_flux_swi = loc_fPOC
+
+dum_sed_bsi_wtpc_bot = dum_OMENSED_BC(iarr_OS_bsi_burial)
+dum_sed_mean_bsi  = dum_OMENSED_BC(iarr_OS_bsi_swi)
+dum_sed_pres_fracSi = dum_OMENSED_BC(iarr_OS_bsi_pres_frac)
+dum_swiconc_dsi = dum_sfcsumocn(iarr_OS_sumh4sio4)
+loc_fbsi = dum_sfcsumocn(iarr_OS_bsi)
+loc_bsi_flux_swi = loc_fbsi
+
 !print*, 'loc_FPOC= ',loc_POC_flux_swi
 w = SedVel  
    
@@ -129,19 +148,23 @@ w = SedVel
 
 IF((w .LE. const_real_nullsmall) .OR. OS_remineralize_all) THEN
     !!! Remineralize everything manually
-    dum_sed_pres_fracC = 0.0D0        ! sed POC preservation to zero
-    dum_sed_pres_fracP = 0.0D0
-    dum_sed_OM_wtpc_bot = 0.0D0
-    loc_O2_swiflux = conv_POC_cm3_mol*loc_fPOC*(-OC/SD)
+    dum_sed_pres_fracC   = 0.0D0        ! sed POC preservation to zero
+    dum_sed_pres_fracP   = 0.0D0
+    dum_sed_OM_wtpc_bot  = 0.0D0
+    dum_sed_pres_fracSi  = 0.0D0
+    dum_sed_bsi_wtpc_bot = 0.0D0
+    
+    loc_O2_swiflux = loc_fPOC*(-OC/SD)
     loc_NO3_swiflux = 0.0D0
     loc_NH4_swiflux = 0.0D0
     loc_SO4_swiflux = 0.0D0 !conv_POC_cm3_mol*loc_fPOC*(-SO4C/SD)
-    loc_H2S_swiflux = -loc_SO4_swiflux
+    loc_H2S_swiflux = -1.*loc_SO4_swiflux
     loc_PO4_swiflux = conv_POC_cm3_mol*loc_fPOC*PC1/SD
     loc_DIC_swiflux = conv_POC_cm3_mol*loc_fPOC*DICC1/SD
     loc_ALK_swiflux = 2.0D0*loc_H2S_swiflux + conv_POC_cm3_mol*loc_fPOC*ALKROX/SD   !16/106
-
-    GOTO 100
+    
+    loc_dsi_swiflux = -1.*loc_fbsi
+    GOTO 200
 
 END IF 
 
@@ -154,19 +177,19 @@ END IF
 
 CALL initialise_OMEN_params(WaterTemp=loc_T, O2_BW=dum_swiconc_O2, sed_w=w)
 
-IF (nt.EQ.0) GOTO 200
+IF (nt.EQ.0) GOTO 300
 
 !==================================================================
 ! Deconvolute RCM into multifractions
 !==================================================================
 
 CALL RCM_approx(RCMarray=dum_RCM_approx,RCM_a=RCM_a,RCM_nu=RCM_nu)
-
-!DO i=1, OS_RCM_fracs
-!   print*, 'F', OS_RCM_array(1,i)
-!   print*, 'k', OS_RCM_array(2,i)
+CALL RCM_approx(RCMarray=dum_bsi_approx,RCM_a=bsi_a,RCM_nu=bsi_nu)
+!DO i=1, OS_bsi_fracs
+!   print*, 'F', dum_bsi_approx(1,i)
+!   print*, 'k', dum_bsi_approx(2,i)
 !END DO
-!print*, 'Fsum', SUM(OS_RCM_array(1,:))
+!print*, 'Fsum', SUM(dum_bsi_approx(1,:))
 
  ! Check for no POC deposited -> nothing preserved
 IF (loc_POC_flux_swi .LE. const_real_nullsmall) THEN
@@ -293,6 +316,35 @@ loc_ALK_swiflux = loc_ALK_swiflux + dum_POC_total_flux_zinf*ALKROX/SD
 
 100 CONTINUE
 
+IF (loc_bsi_flux_swi .LE. const_real_nullsmall) THEN
+    
+    dum_sed_pres_fracSi  = 0.0D0
+    dum_sed_bsi_wtpc_bot = 0.0D0    
+    loc_dsi_swiflux = -1.*loc_fbsi
+         
+    GOTO 200
+END IF
+
+CALL OMENSED_calculate_zbsi(dum_bsi_flux_swi=loc_bsi_flux_swi,dum_sed_pres_fracsi=dum_sed_pres_fracsi, &
+                          & dum_sed_bsi_wtpc_bot=dum_sed_bsi_wtpc_bot,dum_bsi_conc_swi=dum_bsi_conc_swi, &
+                          & dum_diag_profile=dum_diag_profile, dum_z_vector=dum_z_vector, &
+						  & dum_bsi_approx=dum_bsi_approx)
+
+! CHECK IF TOC preservation results in insane values, i.e. everything remineralized
+! Then calculate SWI-fluxes "manually"
+IF ((dum_sed_pres_fracSi.NE.dum_sed_pres_fracSi).OR.(dum_sed_pres_fracSi.LE.0.0D0) &
+   & .OR.(dum_sed_pres_fracSi .GT. 1.0D0)) THEN
+    print*, 'TOO FAST', dum_sed_pres_fracSi   
+        
+    dum_sed_pres_fracSi  = 0.0D0
+    dum_sed_bsi_wtpc_bot = 0.0D0    
+    loc_dsi_swiflux = -1.*loc_fbsi
+        
+END IF 
+
+
+200 CONTINUE
+
 ! calculate mean OM concentration [wt%] in upper x cm
 ! convert from mol/cm3 to wt%
 ! just two fractions:
@@ -315,6 +367,9 @@ dum_new_swifluxes(iarr_OS_PO4) = loc_PO4_swiflux!*1.D3*1.D4/365.25D0
 dum_new_swifluxes(iarr_OS_DIC) = loc_DIC_swiflux!*1.D3*1.D4/365.25D0  
 dum_new_swifluxes(iarr_OS_AT)  = loc_ALK_swiflux!*1.D3*1.D4/365.25D0   
 
+dum_new_swifluxes(iarr_OS_bsi)  = loc_bsi_flux_swi!*1.D3*1.D4/365.25D0  
+dum_new_swifluxes(iarr_OS_sumh4sio4)  = loc_dsi_swiflux!*1.D3*1.D4/365.25D0   
+
 ! Boundary conditions
 dum_OMENSED_BC(iarr_OS_w)             = w
 dum_OMENSED_BC(iarr_OS_zox)           = zox
@@ -324,6 +379,10 @@ dum_OMENSED_BC(iarr_OS_POC_burial)    = dum_sed_OM_wtpc_bot
 dum_OMENSED_BC(iarr_OS_POC_swi)       = dum_sed_mean_OM
 dum_OMENSED_BC(iarr_OS_POC_pres_frac) = dum_sed_pres_fracC
 dum_OMENSED_BC(iarr_OS_POP_pres_frac) = dum_sed_pres_fracP
+
+dum_OMENSED_BC(iarr_OS_bsi_burial)    = dum_sed_bsi_wtpc_bot
+dum_OMENSED_BC(iarr_OS_bsi_swi)       = dum_sed_mean_bsi
+dum_OMENSED_BC(iarr_OS_bsi_pres_frac) = dum_sed_pres_fracSi
 
 IF (print_results) THEN
    print*,'Temp C =', dum_sfcsumocn(iarr_OS_T) - 273.15D0
@@ -361,11 +420,142 @@ END IF
 CALL Conservation_Check(fluxarray=dum_new_swifluxes,bcarray=dum_OMENSED_BC)
 
 
-200 CONTINUE
+300 CONTINUE
 
 RETURN
 
 END SUBROUTINE OMENSED
+
+!========================================================================
+
+SUBROUTINE OMENSED_calculate_zbsi(dum_bsi_flux_swi, dum_sed_pres_fracsi, & ! MULTIG
+                                & dum_sed_bsi_wtpc_bot,dum_bsi_conc_swi, &
+                                & dum_diag_profile, dum_z_vector, dum_bsi_approx) 
+!************************************************************************
+!
+! *OMENSED_calculate_zbsi* calculate benthic burial/recycling fluxes of biogenic silica 
+!
+! Author - Sebastiaan van de Velde
+!
+! Version - @(OMENSED)OMENSED_module.f90  V0.1
+!
+! Description -
+!
+! Reference -
+!
+! Calling program - OMENSED
+!
+!************************************************************************
+        
+IMPLICIT NONE
+!
+!*Arguments
+!       
+REAL(8), INTENT(IN)    :: dum_bsi_flux_swi     ! bSi flux at SWI   [mol/(cm2 yr)]
+REAL(8), INTENT(INOUT) :: dum_sed_pres_fracsi  ! bSi concentrations at zinf
+REAL(8), INTENT(INOUT) :: dum_sed_bsi_wtpc_bot ! bSi wt% at bottom of sediment column (geologic preservation)
+REAL(8), DIMENSION(OS_bsi_fracs), INTENT(INOUT) :: dum_bSi_conc_swi ! concentration of b fractions at SWI
+!REAL(8), DIMENSION(OS_vertical_grid), INTENT(INOUT) :: dum_POC_profile
+REAL(8),DIMENSION(OS_vertical_grid,MaxOMENSWIArids), INTENT(INOUT) :: dum_diag_profile 
+REAL(8), DIMENSION(OS_vertical_grid), INTENT(IN) :: dum_z_vector 
+REAl(8), DIMENSION(2,OS_bsi_fracs), INTENT(IN) :: dum_bsi_approx
+!
+!*Local variables
+!
+REAL(8), DIMENSION(OS_bsi_fracs) :: loc_bsi_conc_zinf
+REAL(8), DIMENSION(OS_bsi_fracs) :: dC1dz, C1flx,Cflx, F_bsi1         ! Cflx: Sed input flux to upper boundary, per cm^2 water column
+REAL(8) :: F_bsi, loc_bsi_C0                                                 ! Flux through lower boundary zinf, per cm^2 water-column
+REAL(8), DIMENSION(OS_bsi_fracs) :: loc_bsi_conc_swi_nonbio, loc_bsi_conc_swi, loc_bsi_flux
+REAL(8), DIMENSION(OS_bsi_fracs,OS_vertical_grid) :: loc_bsi_profile
+INTEGER :: i, j
+
+print*,' ------------------ START zbsi ---------------------'
+
+! calculate concentration (mol/cm3) at very top of sediments not accounting for biodiffusion (just account for advection)
+! NOTE: this is needed when calculating final fraction of POC preservation
+! if taking [POC] at SWI including biodiffusion term (e.g. dum_POC1_conc_swi) 
+! the preservation is too high (as not all incoming POC is accounted for)
+
+loc_bsi_C0 = dum_bsi_flux_swi*1.0D0/(1.0D0-por)*1.0D0/w
+!print*, 'loc_POC_C0 =', loc_POC_C0
+
+DO i=1, OS_bsi_fracs
+   
+   loc_bsi_conc_swi_nonbio(i) = dum_bsi_approx(1,i)*loc_bsi_C0
+   !print*, 'loc_POC_conc_swi_nonbio', i, ' =', loc_POC_conc_swi_nonbio(i)
+   
+   aa1(i) = (w-DSQRT(w**2.0D0+4.0D0*DC1*dum_bsi_approx(2,i)))/(2.0D0*DC1)
+   bb1(i) = (w+DSQRT(w**2.0D0+4.0D0*DC1*dum_bsi_approx(2,i)))/(2.0D0*DC1)
+   aa2(i) = (-OS_bsi_array(2,i)/w)
+   !print*, 'aa1', i, ' =', aa1(i)
+   !print*, 'bb1', i, ' =', bb1(i)
+   !print*, 'aa2', i, ' =', aa2(i)
+   
+   loc_bsi_flux(i)=dum_bsi_approx(1,i)*dum_bsi_flux_swi
+   loc_bsi_conc_swi(i) = (loc_bsi_flux(i)*(-aa1(i)*DEXP(aa1(i)*zbio)+bb1(i)*DEXP(bb1(i)*zbio)))/ &
+                  & (-DC1*bb1(i)*aa1(i)*DEXP(bb1(i)*zbio) + DC1*bb1(i)*aa1(i)*DEXP(aa1(i)*zbio) + &
+                  & DC1*bb1(i)*aa1(i)*por*DEXP(bb1(i)*zbio) - DC1*bb1(i)*aa1(i)*por*DEXP(aa1(i)*zbio) - &
+                  & w*aa1(i)*DEXP(aa1(i)*zbio) + &
+                  & w*bb1(i)*DEXP(bb1(i)*zbio) + w*por*aa1(i)*DEXP(aa1(i)*zbio) - w*por*bb1(i)*DEXP(bb1(i)*zbio))
+   
+   !print*, 'loc_POC_conc_swi', i, ' =', loc_POC_conc_swi(i)
+   ! calculate TOC SWI concentration from flux
+   A11(i) = -(loc_bsi_conc_swi(i)*bb1(i)*DEXP(bb1(i)*zbio))/(aa1(i)*DEXP(aa1(i)*zbio)-bb1(i)*DEXP(bb1(i)*zbio)+OS_tolcte) 
+   A22(i)=(A11(i)*(DEXP(aa1(i)*zbio)-DEXP(bb1(i)*zbio))+loc_bsi_conc_swi(i)*DEXP(bb1(i)*zbio))/(DEXP(aa2(i)*zbio)+OS_tolcte) 
+   !print*, 'A11', i, ' =', A11(i)
+   !print*, 'A22', i, ' =', A22(i)
+   
+   ! Cflx: Sed input flux to upper boundary, per cm^2 water column
+   IF (z0.LT.zbio) THEN
+      dC1dz(i) =  A11(i)*(aa1(i)*DEXP(aa1(i)*z0)-bb1(i)*DEXP(bb1(i)*z0))+loc_bsi_conc_swi(i)*bb1(i)*DEXP(bb1(i)*z0)
+      C1flx(i) = - (1.0D0-por)*(-DC1*dC1dz(i) + w*loc_bsi_conc_swi(i))
+   ELSE
+      C1flx(i) = - (1.0D0-por)*w*loc_bsi_conc_swi(i)
+   END IF 
+   
+   !print*, 'C1flx', i, ' =', C1flx(i)
+   Cflx = SUM(C1flx)
+   
+   ! Flux through lower boundary zinf, per cm^2 water-column 
+   F_bsi1(i) = (1-por)*w*A22(i)*DEXP(aa2(i)*zinf)
+   F_bsi = SUM(F_bsi1)
+   
+   ! Concentration at lower boundary zinf
+   IF (zinf.LT.zbio) THEN
+      loc_bsi_conc_zinf(i)=A11(i)*(DEXP(aa1(i)*zinf)-DEXP(bb1(i)*zinf))+loc_bsi_conc_swi(i)*DEXP(bb1(i)*zinf)
+   ELSE
+      loc_bsi_conc_zinf(i)=A22(i)*DEXP(aa2(i)*zinf)
+   END IF
+   
+   DO j=2, OS_vertical_grid-1
+      IF (dum_z_vector(j).LE.zbio) THEN
+         loc_bsi_profile(i,j) = A11(i)*(DEXP(aa1(i)*dum_z_vector(j))-DEXP(bb1(i)*dum_z_vector(j)))+ &
+                              & loc_bsi_conc_swi(i)*DEXP(bb1(i)*dum_z_vector(j))
+      ELSE
+         loc_bsi_profile(i,j) = A22(i)*DEXP(aa2(i)*dum_z_vector(j))
+      END IF
+   END DO
+
+   dum_bsi_conc_swi(i) = loc_bsi_conc_swi(i)
+
+END DO
+
+! DH: need to give back fraction buried of initially deposited (so fraction of the input values to this subroutine)
+dum_diag_profile(1,iarr_OS_bsi)                = SUM(loc_bsi_conc_swi)!SUM(loc_POC_conc_swi_nonbio)
+dum_diag_profile(OS_vertical_grid,iarr_OS_bsi) = SUM(loc_bsi_conc_zinf)
+DO j=2, OS_vertical_grid-1
+   dum_diag_profile(j,iarr_OS_bsi) = SUM(loc_bsi_profile(:,j))
+   !print*, 'zbsi= ',dum_diag_profile(j,iarr_OS_bsi)
+   !print*, 'j= ',j
+END DO
+
+dum_sed_pres_fracSi = SUM(loc_bsi_conc_zinf)/SUM(loc_bsi_conc_swi_nonbio) 
+dum_dsi_total_flux_zinf = F_bsi
+dum_sed_bsi_wtpc_bot = 100.0D0*12.0D0/rho_sed*SUM(loc_bsi_conc_zinf)
+
+RETURN
+
+END SUBROUTINE OMENSED_calculate_zbsi
     
 !========================================================================
 

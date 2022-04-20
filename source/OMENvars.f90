@@ -19,10 +19,11 @@ IMPLICIT NONE
 REAL(8), ALLOCATABLE, DIMENSION(:,:) :: OS_SWI_fluxes, OS_BW_conds, OS_part_fluxes
 REAL(8), ALLOCATABLE, DIMENSION(:,:) :: OS_boundaryconds
 REAL(8), ALLOCATABLE, DIMENSION(:,:) :: OS_RCM_array 
+REAL(8), ALLOCATABLE, DIMENSION(:,:) :: OS_bsi_array 
 !REAL(8), ALLOCATABLE, DIMENSION(:) :: OS_POC_profile
 REAL(8), ALLOCATABLE, DIMENSION(:,:) :: OS_diag_profile
 REAL(8), ALLOCATABLE, DIMENSION(:) :: OS_z_vector
-REAL(8), ALLOCATABLE, DIMENSION(:) :: OS_POC_conc_swi
+REAL(8), ALLOCATABLE, DIMENSION(:) :: OS_POC_conc_swi,OS_bsi_conc_swi 
 
 REAL(8), ALLOCATABLE, DIMENSION(:) :: aa1, bb1, aa2, A11, A22
 !

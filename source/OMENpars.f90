@@ -24,9 +24,9 @@ REAL(8) :: water_temp
 
 REAL(8) :: ls_a, ls_b, ls_c, ls_d, ls_e, ls_f
 
-INTEGER :: MaxOMENSWIArids, MaxOMENbcArids, OS_RCM_fracs
+INTEGER :: MaxOMENSWIArids, MaxOMENbcArids, OS_RCM_fracs, OS_bsi_fracs
 INTEGER :: OS_vertical_grid
-REAL(8) :: RCM_a, RCM_nu
+REAL(8) :: RCM_a, RCM_nu, bsi_a, bsi_nu
 
 REAL(8) :: const_real_nullsmall, const_R_SI, OS_tolcte   
 REAL(8) :: conv_POC_cm3_mol, fun_calc_sed_vol
@@ -58,9 +58,11 @@ REAL(8) ::  X_C, Y_N, Z_P, SD, OC, NC1, NC2, PC1, PC2, SO4C, O2H2S, DICC1, DICC2
          &  MC, gammaNH4, gammaH2S, gammaCH4, satSO4, NO3CR                                  
 REAL(8) ::  ALKROX, ALKRNIT, ALKRDEN, ALKRSUL, ALKRH2S, ALKRMET, ALKRAOM, zoxgf   
 REAL(8) ::  dum_POC1_conc_swi, dum_POC2_conc_swi, dum_POC3_conc_swi , dum_POC1_conc_swi_nonbio, &
-         &  dum_POC2_conc_swi_nonbio, dum_POC_total_flux_zinf, dum_swiconc_O2, dum_swiconc_SO4, &
+         &  dum_POC2_conc_swi_nonbio, dum_POC_total_flux_zinf, &
+         &  dum_dsi_total_flux_zinf,  &
+         &  dum_swiconc_O2, dum_swiconc_SO4, &
          &  dum_swiconc_H2S, dum_swiconc_NO3, dum_swiconc_NH4, dum_swiconc_PO4, dum_swiflux_M, &
-         &  dum_swiconc_DIC, dum_swiconc_ALK              
+         &  dum_swiconc_DIC, dum_swiconc_ALK, dum_swiconc_dsi          
 REAL(8) :: DC1, DC2, k1, k2, qdispO2, adispO2, DO21, DO22, r_zxf                         
 REAL(8) :: qdispNO3, adispNO3, DN1, DN2, zno3, KNH4, &
          & qdispSO4, adispSO4, DSO41, DSO42, zso4, &

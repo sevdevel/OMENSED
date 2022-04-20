@@ -47,8 +47,8 @@ IMPLICIT NONE
 MAXT=4
 DELTI=1
 
-MaxOMENSWIArids=11
-MaxOMENbcArids=9
+MaxOMENSWIArids=13
+MaxOMENbcArids=11
 OS_vertical_grid=100
 water_temp=273.15D0 + 20.D0 ! K
 
@@ -56,6 +56,9 @@ water_temp=273.15D0 + 20.D0 ! K
 OS_RCM_fracs=100
 RCM_a=1.D0
 RCM_nu=0.125D0
+OS_bsi_fracs=100
+bsi_a=1.D0
+bsi_nu=0.125D0
 
 !---OMENSED global parameters
 
