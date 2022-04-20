@@ -1,0 +1,12 @@
+#
+# Series of targets for compiling C-GEM on different platforms
+#
+# Author - Sebastiaan van de Velde
+#
+
+
+# Linux gfortran (GNU Fortran)
+linux-gfort:
+	$(MAKE) $(EXEFILE) "FC=gfortran" "FCOPTS= -O3" "FCDEFS=$(FCDEFS)" \
+        "FCDEBUG=" "CPP=" "CPPF=cpp" "CPPOPTS=-traditional-cpp" \
+        "CPPDEFS=$(CPPDFLAGS)"

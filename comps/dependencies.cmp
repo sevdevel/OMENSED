@@ -1,0 +1,17 @@
+# modules
+
+OMENSED_module.o: OMENSED_module.f90 OMENpars.o OMENvars.o OMENids.o OMEN_Functions.o OMEN_initialisation.o
+OMEN_readwriteroutines.o: OMEN_readwriteroutines.f90 OMENpars.o OMENids.o 
+default_OMENSED.o: default_OMENSED.f90 OMENpars.o
+OMEN_Functions.o: OMEN_Functions.f90
+OMEN_initialisation.o: OMEN_initialisation.f90 OMENpars.o OMENvars.o
+Allocate_OMEN_Arrays.o: Allocate_OMEN_Arrays.f90 OMENpars.o OMENvars.o
+OMENids.o: OMENids.f90
+OMENpars.o: OMENpars.f90
+OMENvars.o: OMENvars.f90
+
+# main program
+
+main_model.o: main_model.f90 OMENSED_module.o OMENpars.o OMENvars.o OMEN_readwriteroutines.o default_OMENSED.o OMENids.o \
+              Allocate_OMEN_Arrays.o
+

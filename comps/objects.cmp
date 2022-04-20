@@ -1,0 +1,6 @@
+MODULES = \
+OMENSED_module.o OMENvars.o OMENpars.o OMEN_readwriteroutines.o default_OMENSED.o \
+OMENids.o OMEN_Functions.o OMEN_initialisation.o Allocate_OMEN_Arrays.o
+
+SUBPROGS = \
+
